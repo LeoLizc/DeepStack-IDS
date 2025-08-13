@@ -42,6 +42,7 @@ public class FlowMonitorPane extends JPanel {
     private DefaultListModel<PcapIfWrapper> listModel;
     private JLabel lblStatus;
     private JLabel lblFlowCnt;
+    private int lblCount;
 
     private TrafficFlowWorker mWorker;
 
@@ -187,6 +188,7 @@ public class FlowMonitorPane extends JPanel {
         lblStatus = new JLabel("Get ready");
         lblStatus.setForeground(SystemColor.desktop);
         lblFlowCnt = new JLabel("0");
+        lblCount = 0;
 
         pane.add(Box.createHorizontalStrut(5));
         pane.add(lblStatus);
@@ -353,13 +355,12 @@ public class FlowMonitorPane extends JPanel {
         String path = FlowMgr.getInstance().getAutoSaveFile();
         logger.info("path:{}", path);
 
-        if(defaultTableModel.getRowCount()>0 && new File(path).exists()) {
-            StringBuilder msg = new StringBuilder("The flow has been saved to :");
-            msg.append(Sys.LINE_SEP);
-            msg.append(path);
+        if(new File(path).exists()) {
+            String msg = "The flow has been saved to :" + Sys.LINE_SEP +
+                    path;
 
             UIManager.put("OptionPane.minimumSize",new Dimension(0, 0));
-            JOptionPane.showMessageDialog(this.getParent(),msg.toString());
+            JOptionPane.showMessageDialog(this.getParent(), msg);
         }
     }
 
@@ -377,7 +378,13 @@ public class FlowMonitorPane extends JPanel {
         csvWriterThread.execute(new InsertCsvRow(header, flowStringList, path, filename));
 
         //insert flows to JTable
-        SwingUtilities.invokeLater(new InsertTableRow(defaultTableModel,flowDataList,lblFlowCnt));
+//        SwingUtilities.invokeLater(new InsertTableRow(defaultTableModel,flowDataList,lblFlowCnt));
+        if (lblCount <= 999) {
+            lblCount++;
+            lblFlowCnt.setText(String.valueOf(lblCount));
+        } else {
+            lblFlowCnt.setText("999+");
+        }
         btnSave.setEnabled(true);
     }
 }
