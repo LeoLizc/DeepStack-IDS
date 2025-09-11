@@ -316,12 +316,14 @@ public class FlowMonitorPane extends JPanel {
             } else if(TrafficFlowWorker.PROPERTY_EVALUATION.equalsIgnoreCase(event.getPropertyName()) && !showingPane) {
                 String result = (String) event.getNewValue();
                 //				SHOWING A DIALOG
+                showingPane = true;
                 JOptionPane.showMessageDialog(
                         null,
                         "Flow evaluation result indicates potential threat: " + result,
                         "Threat Detected",
                         JOptionPane.WARNING_MESSAGE
                 );
+                showingPane = false;
             } else if ("state".equals(event.getPropertyName())) {
                 switch (task.getState()) {
                     case STARTED:
