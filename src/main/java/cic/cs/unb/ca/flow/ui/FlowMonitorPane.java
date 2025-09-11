@@ -15,7 +15,6 @@ import org.jnetpcap.PcapIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import cic.cs.unb.ca.jnetpcap.worker.InsertCsvRow;
-import swing.common.InsertTableRow;
 import swing.common.JTable2CSVWorker;
 import swing.common.TextFileFilter;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.Executors;
 public class FlowMonitorPane extends JPanel {
     protected static final Logger logger = LoggerFactory.getLogger(FlowMonitorPane.class);
 
-
     private JTable flowTable;
     private DefaultTableModel defaultTableModel;
     private JList<PcapIfWrapper> list;
@@ -43,6 +41,8 @@ public class FlowMonitorPane extends JPanel {
     private JLabel lblStatus;
     private JLabel lblFlowCnt;
     private int lblCount;
+
+    private JTextField urlInputField;
 
     private TrafficFlowWorker mWorker;
 
@@ -57,7 +57,6 @@ public class FlowMonitorPane extends JPanel {
     private JFileChooser fileChooser;
 
     private ExecutorService csvWriterThread;
-
 
     public FlowMonitorPane() {
         init();
@@ -76,17 +75,17 @@ public class FlowMonitorPane extends JPanel {
         csvWriterThread.shutdown();
     }
 
-    private JPanel initCenterPane(){
+    private JPanel initCenterPane() {
         JPanel pane = new JPanel();
         pane.setLayout(new BorderLayout(0, 0));
-        pane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        pane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,initFlowPane(), initNWifsPane());
-        splitPane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, initFlowPane(), initNWifsPane());
+        splitPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         splitPane.setOneTouchExpandable(true);
-        splitPane.setResizeWeight(1.0);
+        splitPane.setResizeWeight(.5);
 
-        pane.add(splitPane,BorderLayout.CENTER);
+        pane.add(splitPane, BorderLayout.CENTER);
         return pane;
     }
 
@@ -95,7 +94,7 @@ public class FlowMonitorPane extends JPanel {
         pane.setLayout(new BorderLayout(0, 5));
         pane.setBorder(BorderFactory.createLineBorder(new Color(0x555555)));
 
-        //pane.add(initTableBtnPane(), BorderLayout.NORTH);
+        // pane.add(initTableBtnPane(), BorderLayout.NORTH);
         pane.add(initTablePane(), BorderLayout.CENTER);
         pane.add(initStatusPane(), BorderLayout.SOUTH);
 
@@ -105,23 +104,36 @@ public class FlowMonitorPane extends JPanel {
     private JPanel initTablePane() {
         JPanel pane = new JPanel();
         pane.setLayout(new BorderLayout(0, 0));
-        pane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        pane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Create URL input panel with vertical centering
+        JPanel urlPanel = new JPanel();
+        urlPanel.setLayout(new BoxLayout(urlPanel, BoxLayout.Y_AXIS));
 
-        String[] arrayHeader = StringUtils.split(FlowFeature.getHeader(), ",");
-        defaultTableModel = new DefaultTableModel(arrayHeader,0);
-        flowTable = new JTable(defaultTableModel);
-        flowTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        JScrollPane scrollPane = new JScrollPane(flowTable);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        // Center the panel vertically in the container
+        JPanel centeringPanel = new JPanel(new GridBagLayout());
 
+        JLabel urlLabel = new JLabel("Ruta de notificaci\u00F3n:");
+        urlLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        pane.add(scrollPane,BorderLayout.CENTER);
+        urlInputField = new JTextField();
+        urlInputField.setMaximumSize(new Dimension(400, 25));
+        urlInputField.setPreferredSize(new Dimension(400, 25));
+        urlInputField.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        urlPanel.add(Box.createVerticalGlue());
+        urlPanel.add(urlLabel);
+        urlPanel.add(Box.createVerticalStrut(10));
+        urlPanel.add(urlInputField);
+        urlPanel.add(Box.createVerticalGlue());
+
+        centeringPanel.add(urlPanel);
+        pane.add(centeringPanel, BorderLayout.CENTER);
 
         return pane;
     }
 
-    private JPanel initTableBtnPane(){
+    private JPanel initTableBtnPane() {
         JPanel btnPane = new JPanel();
         btnPane.setLayout(new BoxLayout(btnPane, BoxLayout.X_AXIS));
         btnSave = new JButton("Save as");
@@ -132,44 +144,29 @@ public class FlowMonitorPane extends JPanel {
         btnGraph.setEnabled(false);
 
         fileChooser = new JFileChooser(new File(FlowMgr.getInstance().getmDataPath()));
-        TextFileFilter csvChooserFilter = new TextFileFilter("csv file (*.csv)", new String[]{"csv"});
+        TextFileFilter csvChooserFilter = new TextFileFilter("csv file (*.csv)", new String[] { "csv" });
         fileChooser.setFileFilter(csvChooserFilter);
 
         btnSave.addActionListener(actionEvent -> {
-            int action = fileChooser.showSaveDialog(FlowMonitorPane.this);
-            if (action == JFileChooser.APPROVE_OPTION) {
+            // CSV saving is now handled automatically in insertFlow method
+            // Show current save location instead
+            String path = FlowMgr.getInstance().getSavePath();
+            String filename = LocalDate.now().toString() + FlowMgr.FLOW_SUFFIX;
+            File currentSaveFile = new File(path, filename);
 
-                File selectedFile = fileChooser.getSelectedFile();
-                String filename = selectedFile.getName();
-                if (FilenameUtils.getExtension(filename).equalsIgnoreCase("csv")) {
-                    //save name ok
-                } else {
-                    selectedFile = new File(selectedFile.getParentFile(), FilenameUtils.getBaseName(filename) + ".csv");
-                }
-                String title = "file conflict";
-                String message = "Another file with the same name already exists,do you want to overwrite?";
-
-                if (selectedFile.exists()) {
-
-                    int reply = JOptionPane.showConfirmDialog(this, message, title, JOptionPane.YES_NO_OPTION);
-
-                    if (reply == JOptionPane.YES_OPTION) {
-                        JTable2CSVWorker worker = new JTable2CSVWorker(flowTable, selectedFile);
-                        worker.execute();
-                    } else {
-                        btnSave.doClick();
-                    }
-                } else {
-                    JTable2CSVWorker worker = new JTable2CSVWorker(flowTable, selectedFile);
-                    worker.execute();
-                }
-                lastSave = selectedFile;
+            if (currentSaveFile.exists()) {
+                String msg = "Current flows are being saved to:" + Sys.LINE_SEP + currentSaveFile.getAbsolutePath();
+                UIManager.put("OptionPane.minimumSize", new Dimension(0, 0));
+                JOptionPane.showMessageDialog(this.getParent(), msg);
+                lastSave = currentSaveFile;
                 btnGraph.setEnabled(true);
+            } else {
+                JOptionPane.showMessageDialog(this.getParent(), "No flows have been captured yet.");
             }
-
         });
 
-        btnGraph.addActionListener(actionEvent -> GuavaMgr.getInstance().getEventBus().post(new FlowVisualEvent(lastSave)));
+        btnGraph.addActionListener(
+                actionEvent -> GuavaMgr.getInstance().getEventBus().post(new FlowVisualEvent(lastSave)));
 
         btnPane.add(Box.createHorizontalGlue());
         btnPane.add(btnSave);
@@ -210,10 +207,10 @@ public class FlowMonitorPane extends JPanel {
 
     private JPanel initNWifsButtonPane() {
         JPanel pane = new JPanel();
-        pane.setBorder(BorderFactory.createEmptyBorder(10,15,10,15));
+        pane.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         pane.setLayout(new BoxLayout(pane, BoxLayout.Y_AXIS));
 
-        Dimension d = new Dimension(80,48);
+        Dimension d = new Dimension(80, 48);
 
         btnLoad = new JButton("Load");
         btnLoad.setMinimumSize(d);
@@ -250,7 +247,7 @@ public class FlowMonitorPane extends JPanel {
     private JPanel initNWifsListPane() {
         JPanel pane = new JPanel();
         pane.setLayout(new BorderLayout(0, 0));
-        pane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        pane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         listModel = new DefaultListModel<>();
         listModel.addElement(new PcapIfWrapper("Click Load button to load network interfaces"));
@@ -258,9 +255,9 @@ public class FlowMonitorPane extends JPanel {
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.setSelectedIndex(0);
         JScrollPane scrollPane = new JScrollPane(list);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(0,0,0,0));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        pane.add(scrollPane,BorderLayout.CENTER);
+        pane.add(scrollPane, BorderLayout.CENTER);
         return pane;
     }
 
@@ -278,7 +275,7 @@ public class FlowMonitorPane extends JPanel {
                             List<PcapIfWrapper> pcapiflist = PcapIfWrapper.fromPcapIf(ifs);
 
                             listModel.removeAllElements();
-                            for(PcapIfWrapper pcapif :pcapiflist) {
+                            for (PcapIfWrapper pcapif : pcapiflist) {
                                 listModel.addElement(pcapif);
                             }
                             btnStart.setEnabled(true);
@@ -305,15 +302,15 @@ public class FlowMonitorPane extends JPanel {
             return;
         }
 
-        mWorker = new TrafficFlowWorker(ifName);
+        mWorker = new TrafficFlowWorker(ifName, getNotificationUrl());
         mWorker.addPropertyChangeListener(event -> {
             TrafficFlowWorker task = (TrafficFlowWorker) event.getSource();
-            if("progress".equals(event.getPropertyName())){
+            if ("progress".equals(event.getPropertyName())) {
                 lblStatus.setText((String) event.getNewValue());
                 lblStatus.validate();
-            }else if (TrafficFlowWorker.PROPERTY_FLOW.equalsIgnoreCase(event.getPropertyName())) {
+            } else if (TrafficFlowWorker.PROPERTY_FLOW.equalsIgnoreCase(event.getPropertyName())) {
                 insertFlow((BasicFlow) event.getNewValue());
-            }else if ("state".equals(event.getPropertyName())) {
+            } else if ("state".equals(event.getPropertyName())) {
                 switch (task.getState()) {
                     case STARTED:
                         break;
@@ -321,14 +318,14 @@ public class FlowMonitorPane extends JPanel {
                         try {
                             lblStatus.setText(task.get());
                             lblStatus.validate();
-                        } catch(CancellationException e){
+                        } catch (CancellationException e) {
 
                             lblStatus.setText("stop listening");
                             lblStatus.setForeground(SystemColor.GRAY);
                             lblStatus.validate();
                             logger.info("Pcap stop listening");
 
-                        }catch (InterruptedException | ExecutionException e) {
+                        } catch (InterruptedException | ExecutionException e) {
                             logger.debug(e.getMessage());
                         }
                         break;
@@ -339,6 +336,7 @@ public class FlowMonitorPane extends JPanel {
         lblStatus.setForeground(SystemColor.desktop);
         btnLoad.setEnabled(false);
         btnStop.setEnabled(true);
+        urlInputField.setEnabled(false);
     }
 
     private void stopTrafficFlow() {
@@ -347,38 +345,35 @@ public class FlowMonitorPane extends JPanel {
             mWorker.cancel(true);
         }
 
-        //FlowMgr.getInstance().stopFetchFlow();
+        // FlowMgr.getInstance().stopFetchFlow();
 
         btnLoad.setEnabled(true);
-
+        urlInputField.setEnabled(true);
 
         String path = FlowMgr.getInstance().getAutoSaveFile();
         logger.info("path:{}", path);
 
-        if(new File(path).exists()) {
+        if (new File(path).exists()) {
             String msg = "The flow has been saved to :" + Sys.LINE_SEP +
                     path;
 
-            UIManager.put("OptionPane.minimumSize",new Dimension(0, 0));
+            UIManager.put("OptionPane.minimumSize", new Dimension(0, 0));
             JOptionPane.showMessageDialog(this.getParent(), msg);
         }
     }
 
     private void insertFlow(BasicFlow flow) {
         List<String> flowStringList = new ArrayList<>();
-        List<String[]> flowDataList = new ArrayList<>();
         String flowDump = flow.dumpFlowBasedFeaturesEx();
         flowStringList.add(flowDump);
-        flowDataList.add(StringUtils.split(flowDump, ","));
 
-        //write flows to csv file
-        String header  = FlowFeature.getHeader();
+        // write flows to csv file
+        String header = FlowFeature.getHeader();
         String path = FlowMgr.getInstance().getSavePath();
         String filename = LocalDate.now().toString() + FlowMgr.FLOW_SUFFIX;
         csvWriterThread.execute(new InsertCsvRow(header, flowStringList, path, filename));
 
-        //insert flows to JTable
-//        SwingUtilities.invokeLater(new InsertTableRow(defaultTableModel,flowDataList,lblFlowCnt));
+        // update flow counter
         if (lblCount <= 999) {
             lblCount++;
             lblFlowCnt.setText(String.valueOf(lblCount));
@@ -386,5 +381,9 @@ public class FlowMonitorPane extends JPanel {
             lblFlowCnt.setText("999+");
         }
         btnSave.setEnabled(true);
+    }
+
+    public String getNotificationUrl() {
+        return urlInputField.getText();
     }
 }

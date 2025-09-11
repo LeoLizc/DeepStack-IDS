@@ -180,7 +180,7 @@ public class PythonProcessManager {
     public void sendMsg(String jsonInput) {
         synchronized (writeLock) {
             try {
-                logger.debug("Sending JSON data: {}", jsonInput);
+                logger.info("Sending JSON data: {}", jsonInput);
                 writer.write(jsonInput);
                 writer.newLine();
                 writer.flush();

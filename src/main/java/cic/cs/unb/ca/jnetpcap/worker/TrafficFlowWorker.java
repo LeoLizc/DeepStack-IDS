@@ -3,6 +3,7 @@ package cic.cs.unb.ca.jnetpcap.worker;
 import cic.cs.unb.ca.jnetpcap.BasicFlow;
 import cic.cs.unb.ca.jnetpcap.FlowGenerator;
 import cic.cs.unb.ca.jnetpcap.PacketReader;
+import cic.cs.unb.ca.notify.HttpClientUtil;
 import cic.cs.unb.ca.python.PythonProcessManager;
 import org.jnetpcap.Pcap;
 import org.jnetpcap.nio.JMemory.Type;
@@ -20,14 +21,24 @@ public class TrafficFlowWorker extends SwingWorker<String,String> implements Flo
 	public static final Logger logger = LoggerFactory.getLogger(TrafficFlowWorker.class);
     public static final String PROPERTY_FLOW = "flow";
 	private String device;
-	private boolean stopped = false;
+	private boolean stopped;
+	private String notifyUrl;
 
 
     public TrafficFlowWorker(String device) {
 		super();
 		this.device = device;
+		this.notifyUrl = null;
+		this.stopped = false;
 
 		PythonProcessManager.getInstance().subscribe(this::onFlowEvaluated);
+	}
+
+	public TrafficFlowWorker(String device, String notifyUrl) {
+		this(device);
+		if (notifyUrl != null && !notifyUrl.isEmpty()) {
+			this.notifyUrl = notifyUrl;
+		}
 	}
 
 	@Override
@@ -134,6 +145,7 @@ public class TrafficFlowWorker extends SwingWorker<String,String> implements Flo
 	public void onFlowGenerated(BasicFlow flow) {
         firePropertyChange(PROPERTY_FLOW,null,flow);
 		if (this.stopped) return;
+		logger.info("Enviando Mensaje");
 		PythonProcessManager.getInstance().sendMsg(flow.dumpFlowBasedFeaturesEx());
 	}
 
@@ -144,6 +156,19 @@ public class TrafficFlowWorker extends SwingWorker<String,String> implements Flo
 			if (!result.equals("BENIGN")) {
 				logger.warn("Flow evaluation result indicates potential threat: {}", result);
 				this.stopped = true;
+
+//				NOTIFYING THE SERVER
+				logger.info("Notifying");
+				if (this.notifyUrl != null && !this.notifyUrl.isEmpty()) {
+					try {
+						String body = String.format("{\"result\": \"%s\"}", result);
+						HttpClientUtil.sendPost(this.notifyUrl, body);
+					} catch (Exception e) {
+						logger.error("Failed to notify server: {}", e.getMessage());
+					}
+				}
+
+//				SHOWING A DIALOG
 				JOptionPane.showMessageDialog(
 					null,
 					"Flow evaluation result indicates potential threat: " + result,

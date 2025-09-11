@@ -30,7 +30,7 @@ public class MainFrame extends JFrame{
 		getContentPane().getInsets().set(5, 5, 5, 5);
 		setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getClassLoader().getResource("CIC_Logo.png")));
 		
-		setMinimumSize(new Dimension(700,500));
+		setMinimumSize(new Dimension(700,470));
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 
