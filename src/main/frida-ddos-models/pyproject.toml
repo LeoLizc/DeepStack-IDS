@@ -1,0 +1,13 @@
+[project]
+name = "frida-ddos-models"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy<=2.2.0",
+    "pandas>=2.3.1",
+    "scikit-learn>=1.7.1",
+    "tensorflow==2.19.0",
+    "tensorflow-io-gcs-filesystem==0.31.0",
+]
