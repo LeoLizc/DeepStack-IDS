@@ -2,7 +2,8 @@ import sys
 import pandas as pd
 import numpy as np
 from consts import HEADERS
-from ml import MachineModel, process_df
+from default_model import model as default_model_instance
+from ml_model import process_df, MLModel
 import warnings
 warnings.filterwarnings("ignore")
 import os
@@ -11,8 +12,18 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 if __name__ == "__main__":
-    model = MachineModel()
-    model.load()
+    # Intentar importar el modelo del módulo 'modelos'
+    try:
+        from modelos import model
+        if not isinstance(model, MLModel):
+            raise TypeError("model is not an instance of MLModel")
+    except (ImportError, TypeError, AttributeError):
+        # Usar la instancia por defecto si la importación falla o no es MLModel
+        model = default_model_instance
+    
+    # Cargar el modelo si es necesario
+    if hasattr(model, 'load'):
+        model.load()
     print('[INFO] Model loaded successfully')
     while True:
         try:

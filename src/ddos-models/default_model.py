@@ -8,7 +8,7 @@ aprendizaje en capas (layer-based).
 
 import os
 import pickle
-from consts import stats_path, encoders_path, COLUMN_MAPPING, DROP_COLUMNS, LABELS, LY1_NN_BATCH_SIZE
+from consts import stats_path, encoders_path, LABELS, LY1_NN_BATCH_SIZE
 # from keras.models import model_from_json
 from models import decision_tree, gradient_boost, random_forest, neural_network, layer1_logistic, layer1_neural_network, layer1_ridgeClassifier, knn
 import random
@@ -16,40 +16,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import mode
 from utils import suppress_stdout_stderr
+from ml_model import MLModel
 
-
-def process_df(df):
-    """
-    Procesa un DataFrame para adaptarlo al formato esperado por los modelos.
-    
-    Args:
-        df (pandas.DataFrame): DataFrame a procesar.
-        
-    Returns:
-        pandas.DataFrame: DataFrame procesado con las columnas adecuadas.
-        
-    Esta función realiza las siguientes operaciones:
-    1. Duplica la columna 'Fwd Header Len' como 'Fwd Header Len1'
-    2. Renombra las columnas según el mapeo definido en COLUMN_MAPPING
-    3. Reordena las columnas según el orden en COLUMN_MAPPING
-    4. Elimina los espacios en blanco de los nombres de las columnas
-    5. Elimina las columnas definidas en DROP_COLUMNS
-    """
-    df['Fwd Header Len1'] = df['Fwd Header Len']
-    df = df.rename(columns=COLUMN_MAPPING)
-
-    # Seleccionar solo las columnas mapeadas, en el orden del segundo dataset
-    ordered_columns = list(COLUMN_MAPPING.values())
-    df = df[ordered_columns]
-
-    # Strip column names to remove blank spaces at start and end
-    df.columns = map(str.strip, df.columns)
-
-    # Drop columns
-    df.drop(columns=DROP_COLUMNS, inplace=True)
-    return df
-
-class MachineModel():
+class MachineModel(MLModel):
     """
     Clase principal para el modelo de detección de ataques DDoS.
     
@@ -154,6 +123,7 @@ class MachineModel():
         
         Y marca el modelo como cargado estableciendo loaded=True.
         """
+        return;
         self._load_encoders()
         self._load_scaler()
         self._load_models_layer0()
@@ -324,3 +294,5 @@ class MachineModel():
 
         # print('prueba', y_predicted)
         return y_predicted
+    
+model = MachineModel()
