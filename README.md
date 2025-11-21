@@ -37,13 +37,13 @@ open a Terminal in the IDE
 //linux:
 $ gradle distZip
 //window
-$ gradlew distZip
+$ ./gradlew distZip
 ```
-the zip file will be in the pathtoproject/CICFlowMeter/build/distributions
+the zip file will be in the pathtoproject/DeepStack-IDS/build/distributions
 
 ### Eclipse
 At the project root
 ```
 mvn package
 ```
-the jar file will be in the pathtoproject/CICFlowMeter/target
+the jar file will be in the pathtoproject/DeepStack-IDS/target
