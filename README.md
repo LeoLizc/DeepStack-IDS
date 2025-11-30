@@ -1,3 +1,11 @@
+## Initial Setup
+
+### Install Python dependencies
+Navigate to `src/ddos-models` and run (only once):
+```
+uv sync
+```
+
 ## Install jnetpcap local repo
 
 for linux, sudo is a prerequisite
